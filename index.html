@@ -1,15 +1,200 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pagina de controle</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conciliação de Produção</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg: #faf7f2;
+    --surface: #ffffff;
+    --surface-sunken: #f3ede3;
+    --border: #e7ded0;
+    --text: #2a2420;
+    --text-muted: #8a8073;
+    --accent: #b97a24;
+    --accent-strong: #96611b;
+    --accent-ink: #ffffff;
+    --ok-bg: #e5f3e6;
+    --ok-text: #2e6b34;
+    --ok-dot: #3f9247;
+    --bad-bg: #fbe9e6;
+    --bad-text: #a13d2c;
+    --bad-dot: #c14d38;
+    --focus: #b97a24;
+
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #1d1815;
+      --surface: #262019;
+      --surface-sunken: #211c17;
+      --border: #3b332a;
+      --text: #f2ebe0;
+      --text-muted: #a89a87;
+      --accent: #e0a44e;
+      --accent-strong: #f2b96a;
+      --accent-ink: #23180a;
+      --ok-bg: #1f3322;
+      --ok-text: #8fd39a;
+      --ok-dot: #5fb56c;
+      --bad-bg: #3a231e;
+      --bad-text: #f0a08e;
+      --bad-dot: #d9694f;
+      --focus: #e0a44e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #1d1815;
+    --surface: #262019;
+    --surface-sunken: #211c17;
+    --border: #3b332a;
+    --text: #f2ebe0;
+    --text-muted: #a89a87;
+    --accent: #e0a44e;
+    --accent-strong: #f2b96a;
+    --accent-ink: #23180a;
+    --ok-bg: #1f3322;
+    --ok-text: #8fd39a;
+    --ok-dot: #5fb56c;
+    --bad-bg: #3a231e;
+    --bad-text: #f0a08e;
+    --bad-dot: #d9694f;
+    --focus: #e0a44e;
+  }
+
+  *{ text-wrap: pretty; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+  }
+  h1, h2, .font-display{ font-family: var(--font-display); text-wrap: balance; }
+  .font-mono-num{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  .eyebrow{
+    font-family: var(--font-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  input[type="file"]::file-selector-button{
+    font-family: var(--font-body);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  input:focus-visible{
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  tbody tr:nth-child(even){ background: var(--surface-sunken); }
+
+  .status-dot{
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    margin-right: 0.4rem;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; }
+  }
+</style>
 </head>
 <body>
-    <input type="file" id="meuArquivo" accept=".xlsx" onchange="ConverterParaJson(this.files[0])">
-    <button onclick="MostrarNoConsole()">Mostrar no console</button>    
-</body>
 
-<script src="index.js" ></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<div class="min-h-full" style="background:var(--bg);">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6" style="padding-block: 2.5rem 4rem;">
+
+    <header class="mb-8">
+      <p class="eyebrow mb-2">Pedacinho do Sol · ADM</p>
+      <h1 class="text-2xl sm:text-[2rem] font-semibold" style="color:var(--text);">Conciliação de Produção</h1>
+      <p class="mt-2 text-sm sm:text-base max-w-[60ch]" style="color:var(--text-muted);">
+        Confere se a quantidade produzida (movimento <span class="font-mono-num">010</span>) bate com a
+        quantidade movimentada (movimento <span class="font-mono-num">999</span>), por produto e por período,
+        a partir do relatório exportado do sistema.
+      </p>
+    </header>
+
+    <section
+      class="rounded-xl p-4 sm:p-5 mb-6"
+      style="background:var(--surface); border:1px solid var(--border);"
+    >
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <label class="flex-1 min-w-0">
+          <span class="sr-only">Selecionar planilha</span>
+          <input
+            id="inputArquivo"
+            type="file"
+            accept=".xlsx,.xls"
+            class="block w-full text-sm rounded-lg cursor-pointer file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm"
+            style="color:var(--text); border:1px dashed var(--border); background:var(--surface-sunken); padding:0.55rem;"
+          />
+        </label>
+        <button
+          id="btnMostrar"
+          disabled
+          class="shrink-0 rounded-lg text-sm font-semibold px-5 py-2.5 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          style="background:var(--accent); color:var(--accent-ink);"
+        >
+          Mostrar relatório
+        </button>
+      </div>
+      <p id="status" class="mt-3 text-sm" style="color:var(--text-muted);">
+        Nenhuma planilha enviada — a tabela abaixo mostra dados de exemplo.
+      </p>
+    </section>
+
+    <section id="resumo" class="grid grid-cols-3 gap-3 mb-6">
+      <div class="rounded-xl p-3.5" style="background:var(--surface); border:1px solid var(--border);">
+        <p class="eyebrow mb-1">Grupos</p>
+        <p id="resumoTotal" class="text-xl font-mono-num font-semibold" style="color:var(--text);">0</p>
+      </div>
+      <div class="rounded-xl p-3.5" style="background:var(--surface); border:1px solid var(--border);">
+        <p class="eyebrow mb-1">Batem</p>
+        <p id="resumoBatem" class="text-xl font-mono-num font-semibold" style="color:var(--ok-text);">0</p>
+      </div>
+      <div class="rounded-xl p-3.5" style="background:var(--surface); border:1px solid var(--border);">
+        <p class="eyebrow mb-1">Não batem</p>
+        <p id="resumoNaoBatem" class="text-xl font-mono-num font-semibold" style="color:var(--bad-text);">0</p>
+      </div>
+    </section>
+
+    <section class="rounded-xl overflow-x-auto" style="border:1px solid var(--border);">
+      <table class="w-full text-sm border-collapse min-w-[640px]">
+        <thead>
+          <tr style="background:var(--surface-sunken);">
+            <th class="text-left px-3 py-2.5 font-semibold" style="color:var(--text); border-bottom:1px solid var(--border);">Produto</th>
+            <th class="text-left px-3 py-2.5 font-semibold" style="color:var(--text); border-bottom:1px solid var(--border);">Descrição</th>
+            <th class="text-left px-3 py-2.5 font-semibold" style="color:var(--text); border-bottom:1px solid var(--border);">Período</th>
+            <th class="text-right px-3 py-2.5 font-semibold" style="color:var(--text); border-bottom:1px solid var(--border);">Produzido</th>
+            <th class="text-right px-3 py-2.5 font-semibold" style="color:var(--text); border-bottom:1px solid var(--border);">Movimentado</th>
+            <th class="text-right px-3 py-2.5 font-semibold" style="color:var(--text); border-bottom:1px solid var(--border);">Diferença</th>
+            <th class="text-center px-3 py-2.5 font-semibold" style="color:var(--text); border-bottom:1px solid var(--border);">Bate</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela" style="background:var(--surface);"></tbody>
+      </table>
+    </section>
+
+  </div>
+</div>
+
+<script src="index.js"></script>
+</body>
 </html>
